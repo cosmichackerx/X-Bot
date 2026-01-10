@@ -1,6 +1,7 @@
 /**
- * index.js - The Static Engine
- * YOU NEVER NEED TO EDIT THIS FILE AGAIN.
+ * index.js - Dynamic Core
+ * Purpose: Connect to WhatsApp and delegate logic to lib/handler.js
+ * Status: IMMUTABLE (Do not edit)
  */
 
 const {
@@ -15,7 +16,7 @@ const pino = require('pino');
 const { startServer } = require('./lib/server');
 const { messageHandler } = require('./lib/handler');
 
-// Global Socket
+// Global Socket Scope
 let globalSock = null;
 
 async function startXBot() {
@@ -37,10 +38,10 @@ async function startXBot() {
 
     globalSock = sock;
 
-    // 1. Start the Pairing Web Server
+    // 1. Start the Web Server (Pass sock for pairing)
     startServer(sock);
 
-    // 2. Connection Update Listener
+    // 2. Connection Logic
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'close') {
@@ -53,20 +54,20 @@ async function startXBot() {
         }
     });
 
-    // 3. Credentials Update
+    // 3. Save Credentials
     sock.ev.on('creds.update', saveCreds);
 
-    // 4. Message Listener (Passes to Handler)
+    // 4. Message Handler
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
             if (!chatUpdate.messages || chatUpdate.messages.length === 0) return;
             const msg = chatUpdate.messages[0];
             if (!msg.message) return;
             
-            // Pass execution to the "Brain"
+            // Pass to the dynamic handler
             await messageHandler(sock, msg);
         } catch (err) {
-            console.error("Error in message loop:", err);
+            console.error("Error in message flow:", err);
         }
     });
 }
