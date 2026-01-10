@@ -1,6 +1,7 @@
 module.exports = {
-    // The "run" function is what gets executed
+    cmd: 'ping',
+    desc: 'Check system status',
     run: async ({ sock, m, reply }) => {
-        await reply('Pong! 🏓\nSystem is fully dynamic.');
+        await reply('⚡ X Bot is Online and ready!');
     }
 };
