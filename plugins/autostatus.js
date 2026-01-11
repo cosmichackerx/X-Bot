@@ -2,8 +2,8 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
 // --- CONFIGURATION ---
 const CONFIG = {
-    AUTO_VIEW: true,           // Set to false to disable auto-read
-    AUTO_REACT: true,          // Set to false to disable auto-react
+    AUTO_VIEW: true,
+    AUTO_REACT: true,
     
     // Add as many emojis as you want here
     REACT_EMOJIS: ['💚', '🔥', '😂', '😍', '👍', '😎', '💯', '🥵', '👋', '🤖', '⚡'] 
@@ -60,22 +60,38 @@ module.exports = {
 
     // 2. BACKGROUND EVENT: Auto View & Random React
     events: async (sock, m) => {
-        if (m.key.remoteJid === 'status@broadcast' && !m.key.fromMe) {
-            
-            // Auto View
-            if (CONFIG.AUTO_VIEW) {
-                await sock.readMessages([m.key]);
-                console.log(`👁️ Auto-Viewed Status from ${m.pushName || 'Unknown'}`);
-            }
-
-            // Auto React (Randomly)
-            if (CONFIG.AUTO_REACT) {
-                const randomEmoji = CONFIG.REACT_EMOJIS[Math.floor(Math.random() * CONFIG.REACT_EMOJIS.length)];
+        try {
+            // Check if it's a status update
+            if (m.key.remoteJid === 'status@broadcast' && !m.key.fromMe) {
                 
-                await sock.sendMessage(m.key.remoteJid, {
-                    react: { text: randomEmoji, key: m.key }
-                });
+                // CRITICAL: Get the sender's JID (participant)
+                const participant = m.key.participant || m.participant;
+
+                // 1. Auto View (Force strict key structure)
+                if (CONFIG.AUTO_VIEW) {
+                    await sock.readMessages([{ 
+                        remoteJid: 'status@broadcast', 
+                        id: m.key.id, 
+                        participant: participant // <--- THIS IS KEY!
+                    }]);
+                    
+                    console.log(`👁️ Auto-Viewed Status from: ${m.pushName || participant.split('@')[0]}`);
+                }
+
+                // 2. Auto React
+                if (CONFIG.AUTO_REACT) {
+                    const randomEmoji = CONFIG.REACT_EMOJIS[Math.floor(Math.random() * CONFIG.REACT_EMOJIS.length)];
+                    
+                    await sock.sendMessage('status@broadcast', {
+                        react: {
+                            text: randomEmoji,
+                            key: m.key // React to the specific status key
+                        }
+                    }, { statusJidList: [participant] }); // Ensure it routes to the user
+                }
             }
+        } catch (err) {
+            console.error("Error in AutoStatus Event:", err);
         }
     }
 };
