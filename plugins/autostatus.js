@@ -1,10 +1,12 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
-// CONFIG
+// --- CONFIGURATION ---
 const CONFIG = {
-    AUTO_VIEW: true,
-    AUTO_REACT: true,
-    REACT_EMOJI: '💚'
+    AUTO_VIEW: true,           // Set to false to disable auto-read
+    AUTO_REACT: true,          // Set to false to disable auto-react
+    
+    // Add as many emojis as you want here
+    REACT_EMOJIS: ['💚', '🔥', '😂', '😍', '👍', '😎', '💯', '🥵', '👋', '🤖', '⚡'] 
 };
 
 module.exports = {
@@ -56,7 +58,7 @@ module.exports = {
         }
     },
 
-    // 2. BACKGROUND EVENT: Auto View & React
+    // 2. BACKGROUND EVENT: Auto View & Random React
     events: async (sock, m) => {
         if (m.key.remoteJid === 'status@broadcast' && !m.key.fromMe) {
             
@@ -66,10 +68,12 @@ module.exports = {
                 console.log(`👁️ Auto-Viewed Status from ${m.pushName || 'Unknown'}`);
             }
 
-            // Auto React
+            // Auto React (Randomly)
             if (CONFIG.AUTO_REACT) {
+                const randomEmoji = CONFIG.REACT_EMOJIS[Math.floor(Math.random() * CONFIG.REACT_EMOJIS.length)];
+                
                 await sock.sendMessage(m.key.remoteJid, {
-                    react: { text: CONFIG.REACT_EMOJI, key: m.key }
+                    react: { text: randomEmoji, key: m.key }
                 });
             }
         }
