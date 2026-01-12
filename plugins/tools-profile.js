@@ -12,7 +12,7 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
             else if (m.quoted) {
                 who = m.quoted.sender;
             } 
-            // If user provided text (phone number): .profile +20 12 08680204
+            // If user provided text (phone number): .profile +20 12 123456789
             else if (text) {
                 // Strip non-numeric characters and append standard suffix
                 who = text.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
