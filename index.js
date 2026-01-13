@@ -1,7 +1,7 @@
 /**
  * index.js - Dynamic Core
  * Purpose: Connect to WhatsApp and delegate logic to lib/handler.js
- * Status: FIXED & ROBUST
+ * Status: IMMUTABLE (Do not edit)
  */
 
 const {
@@ -13,7 +13,7 @@ const {
     Browsers
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
-const { startServer } = require('./lib/server'); // Ensure this file exists
+const { startServer } = require('./lib/server');
 const { messageHandler } = require('./lib/handler');
 
 // Global Socket Scope
@@ -27,22 +27,19 @@ async function startXBot() {
 
     const sock = makeWASocket({
         version,
-        logger: pino({ level: 'silent' }), // Set to 'debug' if you need deep logs
-        printQRInTerminal: false, // False because you are using a web server (pairing code)
-        // Standard Browser config for better stability
-        browser: Browsers.macOS("Chrome"), 
+        logger: pino({ level: 'silent' }),
+        printQRInTerminal: false,
+        browser: Browsers.macOS("Safari"),
         auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-        },
-        generateHighQualityLinkPreview: true,
+        }
     });
 
     globalSock = sock;
 
     // 1. Start the Web Server (Pass sock for pairing)
-    // Ensure lib/server.js handles the QR/Pairing code display
-    if (startServer) startServer(sock);
+    startServer(sock);
 
     // 2. Connection Logic
     sock.ev.on('connection.update', async (update) => {
@@ -53,7 +50,7 @@ async function startXBot() {
             if (shouldReconnect) startXBot();
         } else if (connection === 'open') {
             console.log('✅ Connected to WhatsApp! Bot is active.');
-            // await sock.sendPresenceUpdate('available'); 
+            await sock.sendPresenceUpdate('available');
         }
     });
 
@@ -63,12 +60,8 @@ async function startXBot() {
     // 4. Message Handler
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
-            // Filter out status updates (broadcasts) and empty messages
             if (!chatUpdate.messages || chatUpdate.messages.length === 0) return;
             const msg = chatUpdate.messages[0];
-            
-            // Ignore status updates
-            if (msg.key.remoteJid === 'status@broadcast') return;
             if (!msg.message) return;
             
             // Pass to the dynamic handler
@@ -78,10 +71,5 @@ async function startXBot() {
         }
     });
 }
-
-// Global Error Handling (Prevents crashes)
-process.on('uncaughtException', function (err) {
-    console.error('Caught exception: ', err);
-});
 
 startXBot();
