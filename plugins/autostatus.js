@@ -1,46 +1,32 @@
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-
 module.exports = {
-    cmd: 'status',
-    desc: 'Reply to a status to save it',
-    run: async ({ sock, m, reply }) => {
-        // Check if replying to a status
-        const quoted = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+    // This plugin has NO 'cmd'. It uses 'listen' to run on every message.
+    listen: async ({ sock, m, msg, from }) => {
         
-        if (!quoted) return reply('❌ Please reply to a WhatsApp Status to save it.');
+        // Check if message is a Broadcast (Status Update)
+        if (from === 'status@broadcast') {
+            
+            // 1. Auto View (Mark as Read)
+            // We create a specific key for the read receipt
+            const key = {
+                remoteJid: from,
+                id: m.key.id,
+                participant: m.key.participant // The user who posted the status
+            };
+            
+            await sock.readMessages([key]);
 
-        try {
-            // Detect media type
-            const type = Object.keys(quoted)[0];
-            let mediaStream;
-            let extension = '';
+            // 2. Dynamic Reacts (Random Emoji)
+            const emojis = ['💚', '🔥', '✨', '⚡', '😂', '👀', '🚀'];
+            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
 
-            if (type === 'imageMessage') {
-                mediaStream = await downloadContentFromMessage(quoted.imageMessage, 'image');
-                extension = 'jpg';
-            } else if (type === 'videoMessage') {
-                mediaStream = await downloadContentFromMessage(quoted.videoMessage, 'video');
-                extension = 'mp4';
-            } else {
-                return reply('❌ Only Images and Videos can be saved.');
-            }
+            await sock.sendMessage(from, {
+                react: {
+                    text: randomEmoji,
+                    key: m.key
+                }
+            }, { statusJidList: [m.key.participant] });
 
-            // Convert stream to buffer
-            let buffer = Buffer.from([]);
-            for await (const chunk of mediaStream) {
-                buffer = Buffer.concat([buffer, chunk]);
-            }
-
-            // Send back to user
-            if (type === 'imageMessage') {
-                await sock.sendMessage(m.key.remoteJid, { image: buffer, caption: '✅ Status Saved' }, { quoted: m });
-            } else {
-                await sock.sendMessage(m.key.remoteJid, { video: buffer, caption: '✅ Status Saved' }, { quoted: m });
-            }
-
-        } catch (e) {
-            console.error(e);
-            reply('❌ Error downloading status.');
+            console.log(`👁️ Auto Viewed Status from: ${m.pushName || m.key.participant.split('@')[0]}`);
         }
     }
 };
