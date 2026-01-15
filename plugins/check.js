@@ -3,7 +3,7 @@ module.exports = {
     desc: 'Check if number exists + Scan neighbors',
     run: async ({ sock, m, args, reply }) => {
         // 1. Get the Target Number
-        if (!args[0]) return reply('❌ Please provide a number.\nExample: .check +923367307471');
+        if (!args[0]) return reply('❌ Please provide a number.\nExample: .check 923367307471');
 
         // Clean the number (remove + and spaces)
         const inputNumber = args.join('').replace(/[^0-9]/g, '');
@@ -14,11 +14,10 @@ module.exports = {
         await reply(`🔍 *Scanning Network...*\nTarget: ${inputNumber}\nAlgorithm: Neighborhood Search (±10)`);
 
         // 2. Prepare the List (Target + Increments + Decrements)
-        // We will scan the target, plus 5 numbers UP and 5 numbers DOWN.
         const numbersToCheck = [];
         const range = 10; // Check 10 neighbors (5 up, 5 down)
 
-        // Add Decrements (Previous numbers)
+        // Add Decrements
         for (let i = range; i > 0; i--) {
             numbersToCheck.push((targetInt - i).toString());
         }
@@ -26,27 +25,31 @@ module.exports = {
         // Add Target
         numbersToCheck.push(inputNumber);
 
-        // Add Increments (Next numbers)
+        // Add Increments
         for (let i = 1; i <= range; i++) {
             numbersToCheck.push((targetInt + i).toString());
         }
 
         try {
-            // 3. Perform Bulk Check
-            // We format them as JIDs for the API
+            // 3. Perform Bulk Check (FIXED)
+            // We map the list and check each number individually in parallel
             const jidList = numbersToCheck.map(n => n + '@s.whatsapp.net');
             
-            // Query WhatsApp Server
-            const results = await sock.onWhatsApp(jidList);
+            const checkPromises = jidList.map(jid => sock.onWhatsApp(jid));
+            const resultsRaw = await Promise.all(checkPromises);
             
-            if (!results || results.length === 0) {
+            // Flatten the results (because each check returns an array)
+            const results = resultsRaw.flat();
+            
+            // 4. Filter Results
+            // We look for any result that exists
+            const activeNumbers = results
+                .filter(r => r && r.exists)
+                .map(r => r.jid.split('@')[0]);
+
+            if (activeNumbers.length === 0) {
                 return reply('❌ No valid WhatsApp accounts found in this range.');
             }
-
-            // 4. Filter & Sort Results
-            const activeNumbers = results
-                .filter(r => r.exists)
-                .map(r => r.jid.split('@')[0]);
 
             // 5. Build Report
             let report = `📡 *NETWORK CHECK REPORT*\n`;
