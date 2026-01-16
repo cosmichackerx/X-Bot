@@ -1,5 +1,5 @@
 module.exports = {
-    cmd: 'check',
+    cmd: 'neighbours',
     desc: 'Check if number exists + Scan neighbors',
     run: async ({ sock, m, args, reply }) => {
         // 1. Get the Target Number
