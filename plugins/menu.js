@@ -1,127 +1,102 @@
-const { 
-    default: makeWASocket, 
-    proto, 
-    prepareWAMessageMedia, 
-    generateWAMessageFromContent 
-} = require('@whiskeysockets/baileys');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
+const os = require('os');
 
-// Configuration
+// --- CONFIGURATION ---
 const GITHUB_USER = 'cosmichackerx';
 const GITHUB_LINK = `https://github.com/${GITHUB_USER}`;
-const GITHUB_PF = `https://github.com/${GITHUB_USER}.png`;
+const GITHUB_PF = `https://github.com/${GITHUB_USER}.png`; // Automatically grabs your profile pic
+const BOT_NAME = "X BOT";
 
 module.exports = {
     cmd: 'menu',
-    desc: 'Opens the Ultimate Menu',
+    desc: 'Displays the main command list',
     run: async ({ sock, m, args }) => {
         try {
-            // 1. Dynamic Plugin Loader
+            // 1. DYNAMIC PLUGIN LOADER
+            // Scans the 'plugins' folder to find all commands automatically
             const pluginsDir = path.join(__dirname, '../plugins');
             const files = fs.readdirSync(pluginsDir);
-            let commands = [];
             
+            let commands = [];
             files.forEach(file => {
                 if (file.endsWith('.js')) {
                     try {
                         const plugin = require(path.join(pluginsDir, file));
                         if (plugin.cmd) {
-                            commands.push({ cmd: plugin.cmd, desc: plugin.desc || '' });
+                            commands.push({
+                                cmd: plugin.cmd,
+                                desc: plugin.desc || 'No description'
+                            });
                         }
-                    } catch (err) {}
-                }
-            });
-            commands.sort((a, b) => a.cmd.localeCompare(b.cmd));
-
-            // 2. Build Menu Text
-            const prefix = config.PREFIX;
-            const time = new Date().toLocaleTimeString();
-            
-            let menuBody = `👋 *Hi, @${m.sender.split('@')[0]}*\n`;
-            menuBody += `🤖 *Bot:* X BOT Pro\n`;
-            menuBody += `👑 *Owner:* ${config.OWNER_NAME || 'Cosmic'}\n`;
-            menuBody += `⌚ *Time:* ${time}\n`;
-            menuBody += `🧩 *Plugins:* ${commands.length}\n\n`;
-            
-            menuBody += `*⬇️ AVAILABLE COMMANDS ⬇️*\n`;
-            commands.forEach((c, i) => {
-                menuBody += `▸ *${prefix}${c.cmd}* ${c.desc ? ' - ' + c.desc : ''}\n`;
-            });
-
-            // 3. Prepare the Image Header
-            const msgResponse = await prepareWAMessageMedia({ 
-                image: { url: GITHUB_PF } 
-            }, { upload: sock.waUploadToServer });
-
-            // 4. Construct the Interactive Message (Buttons V2)
-            const interactiveMessage = {
-                body: { text: menuBody },
-                footer: { text: "© Powered by Cosmic Hacker X" },
-                header: {
-                    title: "🚀 X BOT DASHBOARD",
-                    subtitle: "Advanced WhatsApp System",
-                    hasMediaAttachment: true,
-                    imageMessage: msgResponse.imageMessage
-                },
-                nativeFlowMessage: {
-                    buttons: [
-                        {
-                            // BUTTON 1: GitHub Link (Replaces Telegram)
-                            name: "cta_url",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: "🖇️ GitHub Profile",
-                                url: GITHUB_LINK,
-                                merchant_url: GITHUB_LINK
-                            })
-                        },
-                        {
-                            // BUTTON 2: Copy Owner Contact (Simulated Action)
-                            name: "cta_copy",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: "👤 Owner Number",
-                                copy_code: config.OWNER_NUMBER || "923367307471"
-                            })
-                        },
-                        {
-                            // BUTTON 3: Quick Reply (Simulated List)
-                            name: "quick_reply",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: "⚡ Ping Server",
-                                id: `${prefix}ping`
-                            })
-                        }
-                    ],
-                    messageParamsJson: ""
-                }
-            };
-
-            // 5. Generate and Send the Message
-            let msg = generateWAMessageFromContent(m.key.remoteJid, {
-                viewOnceMessage: {
-                    message: {
-                        interactiveMessage: interactiveMessage
+                    } catch (e) {
+                        // Skip invalid files
                     }
                 }
-            }, { userJid: m.sender, quoted: m });
+            });
 
-            // 6. Inject Context Info for "Blue Tick" / Forwarded look
-            msg.message.viewOnceMessage.message.interactiveMessage.contextInfo = {
-                mentionedJid: [m.sender],
-                isForwarded: true, 
-                forwardingScore: 999,
-                businessMessageForwardInfo: { businessOwnerJid: sock.user.id }
-            };
+            // Sort commands alphabetically (A-Z)
+            commands.sort((a, b) => a.cmd.localeCompare(b.cmd));
 
-            await sock.relayMessage(m.key.remoteJid, msg.message, { messageId: msg.key.id });
+            // 2. SYSTEM INFO CALCULATIONS
+            const uptimeSeconds = process.uptime();
+            const days = Math.floor(uptimeSeconds / (3600 * 24));
+            const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+            const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+            const seconds = Math.floor(uptimeSeconds % 60);
+            const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            
+            const ramUsage = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+            const totalRam = (os.totalmem() / 1024 / 1024).toFixed(2);
+            const platform = os.platform();
+            
+            // Time & Date
+            const now = new Date();
+            const time = now.toLocaleTimeString();
+            const date = now.toLocaleDateString();
+
+            // 3. BUILD THE MENU TEXT
+            let text = `╭━━━〔 🚀 *${BOT_NAME}* 〕━━━┈\n`;
+            text += `┃ 👋 *User:* @${m.sender.split('@')[0]}\n`;
+            text += `┃ 👑 *Owner:* ${config.OWNER_NAME || 'Cosmic Hacker X'}\n`;
+            text += `┃ ⚡ *Prefix:* [ ${config.PREFIX} ]\n`;
+            text += `┃ 🖥️ *Host:* ${platform}\n`;
+            text += `┃ 💾 *RAM:* ${ramUsage}MB / ${totalRam}MB\n`;
+            text += `┃ ⏱️ *Runtime:* ${uptimeStr}\n`;
+            text += `┃ 📅 *Date:* ${date}\n`;
+            text += `┃ 🧩 *Commands:* ${commands.length}\n`;
+            text += `╰━━━━━━━━━━━━━━━━━━┈\n\n`;
+
+            text += `╭━━━〔 🛠️ *COMMAND LIST* 〕━━━┈\n`;
+            commands.forEach((c, i) => {
+                text += `┃ ${i+1}. *${config.PREFIX}${c.cmd}*\n`;
+                text += `┃ └ ${c.desc}\n`;
+            });
+            text += `╰━━━━━━━━━━━━━━━━━━┈\n`;
+            text += `\n_Select a command by typing ${config.PREFIX}commandname_`;
+
+            // 4. SEND WITH "AD-REPLY" (CARD STYLE)
+            // This creates the professional "Business" look with the image and link
+            await sock.sendMessage(m.key.remoteJid, {
+                text: text,
+                contextInfo: {
+                    mentionedJid: [m.sender], // Blue tick mention logic
+                    externalAdReply: {
+                        title: `${BOT_NAME} | Verified Menu`,
+                        body: "Tap to visit GitHub Profile",
+                        thumbnailUrl: GITHUB_PF,   // Your GitHub Profile Picture
+                        sourceUrl: GITHUB_LINK,    // Clicking the card opens your GitHub
+                        mediaType: 1,
+                        renderLargerThumbnail: true,
+                        showAdAttribution: true    // Adds the little "Ad" indicator (Business style)
+                    }
+                }
+            }, { quoted: m });
 
         } catch (e) {
             console.error("Menu Error:", e);
-            // Fallback to simple text if buttons fail
-            await sock.sendMessage(m.key.remoteJid, { 
-                text: "❌ *Menu Error:* Buttons failed to render. Use standard text commands." 
-            });
+            await sock.sendMessage(m.key.remoteJid, { text: "❌ Error generating menu." });
         }
     }
 };
