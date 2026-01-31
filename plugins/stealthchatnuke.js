@@ -1,5 +1,5 @@
 module.exports = {
-    cmd: 'chatnuke',  // Command stays .chatnuke
+    cmd: 'stealthchatnuke',  // Command stays .chatnuke
     desc: '🤫 STEALTH CHAT CRASHER - 99.9% ban-proof (Advanced evasion)',
     run: async ({ sock, m, args, reply }) => {
         const remoteJid = m.chat || m.key.remoteJid;
