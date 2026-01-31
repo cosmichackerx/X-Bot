@@ -1,9 +1,8 @@
 const { PhoneNumberUtil, PhoneNumberFormat, PhoneNumberType } = require('google-libphonenumber');
-// Load the TimeZone Mapper (Included in the library)
-const PhoneNumberToTimeZonesMapper = require('google-libphonenumber').PhoneNumberToTimeZonesMapper;
+// We use a dedicated package for TimeZones because google-libphonenumber doesn't export the Mapper in JS
+const ct = require('countries-and-timezones');
 
 const phoneUtil = PhoneNumberUtil.getInstance();
-const tzMapper = PhoneNumberToTimeZonesMapper.getInstance();
 const PNF = PhoneNumberFormat;
 const PNT = PhoneNumberType;
 
@@ -11,8 +10,7 @@ module.exports = {
     cmd: 'carrierinfo',
     desc: 'Get carrier, region, time zone, and current time',
     run: async ({ sock, m, args, reply }) => {
-        // 1. INPUT HANDLING (Robust Cleaner)
-        // Joins all arguments to handle spaces: "92 336 ..." -> "92336..."
+        // 1. INPUT HANDLING
         let inputNumber = args.join('');
         
         // If no number provided, check for a reply
@@ -24,12 +22,8 @@ module.exports = {
             }
         }
 
-        // Remove everything except numbers and '+'
-        // This fixes formats like "(92) 336-730" -> "92336730"
+        // Clean input
         inputNumber = inputNumber.replace(/[^0-9+]/g, '');
-
-        // Smart "+" prefixer:
-        // If it doesn't start with +, add it.
         if (!inputNumber.startsWith('+')) {
             inputNumber = '+' + inputNumber;
         }
@@ -45,8 +39,8 @@ module.exports = {
             }
 
             // 4. EXTRACT BASIC DETAILS
-            const regionCode = phoneUtil.getRegionCodeForNumber(number); // PK, US, CU
-            const countryCode = number.getCountryCode(); // 92, 1, 53
+            const regionCode = phoneUtil.getRegionCodeForNumber(number); // e.g. "PK"
+            const countryCode = number.getCountryCode(); // e.g. 92
             const nationalNumber = number.getNationalNumber();
             const formattedInt = phoneUtil.format(number, PNF.INTERNATIONAL);
             
@@ -62,18 +56,20 @@ module.exports = {
                 default: typeStr = 'Unknown';
             }
 
-            // 5. EXTRACT TIME ZONE & CURRENT TIME
-            // This gets the list of timezones for this number (e.g. ['Asia/Karachi'])
-            const timezones = tzMapper.getTimeZonesForGeographicalNumber(number);
+            // 5. EXTRACT TIME ZONE & CURRENT TIME (Fixed Strategy)
             let timeZoneStr = 'Unknown';
             let localTimeStr = 'Unknown';
 
-            if (timezones && timezones.length > 0) {
-                // We use the first matched timezone (usually accurate for mobiles)
-                const targetZone = timezones[0];
+            // Get country data using the Region Code (e.g. "PK")
+            const countryData = regionCode ? ct.getCountry(regionCode) : null;
+            
+            if (countryData && countryData.timezones.length > 0) {
+                // We pick the first timezone for the country (Primary)
+                // For huge countries (US/RU), this is an approximation, but efficient for bots
+                const targetZone = countryData.timezones[0];
                 timeZoneStr = targetZone;
 
-                // Get Current Time in that Zone using Intl API
+                // Get Current Time in that Zone
                 try {
                     localTimeStr = new Date().toLocaleTimeString('en-US', {
                         timeZone: targetZone,
@@ -86,8 +82,6 @@ module.exports = {
                 } catch (err) {
                     localTimeStr = 'Clock Error';
                 }
-            } else {
-                timeZoneStr = "Multiple/Unknown";
             }
 
             // 6. BUILD REPORT
@@ -95,7 +89,7 @@ module.exports = {
             info += `--------------------------------\n`;
             info += `📞 *Number:* ${formattedInt}\n`;
             info += `🌍 *Region:* ${regionCode} (+${countryCode})\n`;
-            info += `📟 *Type:* ${typeStr}\n`;
+            info += `📟 *Line Type:* ${typeStr}\n`;
             info += `🕰️ *Time Zone:* ${timeZoneStr}\n`;
             info += `⌚ *Local Time:* ${localTimeStr}\n`;
             info += `🔢 *National:* ${nationalNumber}\n`;
