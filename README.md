@@ -1,8 +1,41 @@
-## Render
-... (existing content for Render section)
+## Deployment Guide
 
-## Katabump
-Details about Katabump deployment process...
+### Katabump
 
-## Panel
-Details about Panel deployment process...
+Instructions for deploying using Katabump go here.
+
+### Panel
+
+Instructions for deploying using Panel go here.
+
+## Overview
+
+... existing content ... 
+
+## Features
+
+... existing content ... 
+
+## Installation
+
+... existing content ... 
+
+## Usage
+
+... existing content ... 
+
+## Configuration
+
+... existing content ... 
+
+## Contributing
+
+... existing content ... 
+
+## License
+
+... existing content ... 
+
+## Contact
+
+... existing content ... 
