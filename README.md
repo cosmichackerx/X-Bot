@@ -359,14 +359,7 @@ Pull requests welcome.
 
 ---
 
-# ⭐ Credits
-
-* Baileys
-* Groq AI
-* Pollinations AI
-
----
-
+ 
 # 🏁 Final Note
 
 X-BOT is modular, scalable, and production-ready.
